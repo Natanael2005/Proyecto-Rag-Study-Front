@@ -12,7 +12,6 @@ import {
   Mail,
   Hash,
   BookOpen,
-  Clock,
   Lock
 } from "lucide-react"
 
@@ -26,7 +25,6 @@ const MOCK_CAREERS = [
 export default function RegisterPage() {
   // Estados puramente visuales
   const [showPassword, setShowPassword] = useState(false)
-  const [selectedHobbies, setSelectedHobbies] = useState<string[]>(["Programar", "Gaming"])
   const [passwordValue, setPasswordValue] = useState("")
 
   // Controles visuales estáticos
@@ -40,14 +38,6 @@ export default function RegisterPage() {
     uppercase: /[A-Z]/.test(passwordValue),
     number: /[0-9]/.test(passwordValue),
     special: /[^A-Za-z0-9]/.test(passwordValue),
-  }
-
-  const toggleHobby = (hobby: string) => {
-    if (selectedHobbies.includes(hobby)) {
-      setSelectedHobbies(selectedHobbies.filter(h => h !== hobby))
-    } else {
-      setSelectedHobbies([...selectedHobbies, hobby])
-    }
   }
 
   return (
@@ -70,7 +60,7 @@ export default function RegisterPage() {
         {/* Nombres y Apellidos */}
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5 relative">
-            <label htmlFor="first_name" className="text-[#0F172A] text-[10px] font-semibold uppercase tracking-wider">Nombre</label>
+            <label htmlFor="first_name" className="text-[#0F172A] text-[10px] font-semibold uppercase tracking-wider">Nombres</label>
             <div className="relative flex items-center">
               <User className="absolute left-3 h-4 w-4 text-[#64748B]" />
               <input

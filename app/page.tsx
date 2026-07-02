@@ -1,9 +1,8 @@
-import Navbar from "../components/navbar";
-import HeroSection from "../components/hero"; // Asegúrate de que el archivo se llame hero-section.tsx o hero.tsx según lo hayas guardado
-import Footer from "../components/footer";
+import Footer from "@/components/footer";
+import HeroSection from "@/components/hero";
+import Navbar from "@/components/navbar";
 
 export default function Page() {
-
   return (
     <>
       <Navbar />
@@ -11,9 +10,6 @@ export default function Page() {
         <HeroSection />
       </main>
       <Footer />
-
-
-
     </>
   );
 }

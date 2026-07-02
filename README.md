@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NexaBot | Campus IA
 
-## Getting Started
+Maquetado visual de una plataforma educativa para estudiar apuntes y documentos
+con inteligencia artificial. La app usa Next.js App Router, React 19 y Tailwind
+CSS v4.
 
-First, run the development server:
+## Scripts
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run lint
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Rutas
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `/`: landing visual de NexaBot.
+- `/auth/login`: maqueta de inicio de sesión.
+- `/auth/register`: maqueta de registro.
+- `/auth/forgot-password`: maqueta de recuperación de contraseña.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Estado
 
-## Learn More
+El proyecto está en fase de maquetado. Los formularios usan `preventDefault()`
+intencionalmente hasta conectar autenticación real.
 
-To learn more about Next.js, take a look at the following resources:
+## Estructura
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `app/`: rutas, layout raíz y estilos globales.
+- `components/`: piezas visuales reutilizables de landing y auth.
+- `public/`: assets públicos del proyecto.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Antes de cambiar patrones de Next.js, revisa la documentación local en
+`node_modules/next/dist/docs/`, como indica `AGENTS.md`.
