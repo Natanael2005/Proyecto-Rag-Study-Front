@@ -2,18 +2,28 @@
 
 import React, { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Eye, EyeOff, Shield, Loader2, Mail, Lock } from "lucide-react"
-
-// Volvemos a importar tu Layout
 import { AuthLayout } from "@/components/auth-layout"
 
 export default function LoginPage() {
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
 
   // Controles visuales estáticos
   const showMfa = false
   const isLoading = false
   const error = null 
+
+
+
+
+const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault()
+
+  router.push("/dashboard")
+}
+
 
   return (
     // Delegamos la responsabilidad del fondo, el centrado y el título al Layout
@@ -23,7 +33,7 @@ export default function LoginPage() {
       view="login"
     >
       {/* A partir de aquí, solo nos preocupamos por el formulario */}
-      <form onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-5 w-full">
+      <form onSubmit={handleLogin} className="flex flex-col gap-5 w-full">
         
         {error && (
           <div className="rounded-lg border border-[#EF4444]/30 bg-[#EF4444]/10 px-4 py-3 text-sm text-[#EF4444]">
