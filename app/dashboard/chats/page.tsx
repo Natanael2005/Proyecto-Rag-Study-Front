@@ -1,7 +1,10 @@
-import Link from "next/link";
-import { MessageCircle, MoreVertical, Plus } from "lucide-react";
+import { CreateSessionModal } from "@/components/chats/create-session-modal";
+import {
+  SessionCard,
+  type SessionCardData,
+} from "@/components/chats/session-card";
 
-const mockSessions = [
+const mockSessions: SessionCardData[] = [
   {
     id: "historia",
     title: "Repaso de Historia",
@@ -13,6 +16,21 @@ const mockSessions = [
     title: "Base de datos Unidad 1",
     documents: 1,
     updatedAt: "Ayer",
+  },
+];
+
+const mockDocuments = [
+  {
+    id: 1,
+    name: "Apuntes de Historia.pdf",
+  },
+  {
+    id: 2,
+    name: "Unidad 1 - Base de datos.pdf",
+  },
+  {
+    id: 3,
+    name: "Introducción a RAG.pdf",
   },
 ];
 
@@ -32,42 +50,12 @@ export default function ChatsPage() {
           </p>
         </div>
 
-        <button className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-medium text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700">
-          <Plus className="h-4 w-4" />
-          Nuevo chat
-        </button>
+        <CreateSessionModal documents={mockDocuments} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {mockSessions.map((session) => (
-          <article
-            key={session.id}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <Link href={`/dashboard/chats/${session.id}`} className="block flex-1">
-                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                  <MessageCircle className="h-5 w-5" />
-                </div>
-
-                <h2 className="font-semibold text-slate-950">
-                  {session.title}
-                </h2>
-
-                <p className="mt-2 text-sm text-slate-600">
-                  {session.documents} documento(s) vinculados
-                </p>
-
-                <p className="mt-1 text-xs text-slate-500">
-                  Última actividad: {session.updatedAt}
-                </p>
-              </Link>
-
-              <button className="rounded-lg p-2 text-slate-500 hover:bg-slate-50 hover:text-slate-950">
-                <MoreVertical className="h-4 w-4" />
-              </button>
-            </div>
-          </article>
+          <SessionCard key={session.id} session={session} />
         ))}
       </div>
     </section>
