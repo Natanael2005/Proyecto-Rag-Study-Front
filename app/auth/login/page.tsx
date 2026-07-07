@@ -1,40 +1,75 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Eye, EyeOff, Shield, Loader2, Mail, Lock } from "lucide-react"
+import { Eye, EyeOff, Loader2, Mail, Lock } from "lucide-react"
 import { AuthLayout } from "@/components/auth-layout"
+import { ApiRequestError, loginUser } from "@/lib/auth-api"
 
 export default function LoginPage() {
   const router = useRouter()
+  const isSubmittingRef = useRef(false)
+
   const [showPassword, setShowPassword] = useState(false)
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
 
-  // Controles visuales estáticos
-  const showMfa = false
-  const isLoading = false
-  const error = null 
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
+  const isFormValid = email.trim() !== "" && password.trim() !== ""
 
+  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
 
+    if (isSubmittingRef.current || isLoading) return
 
-const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
-  e.preventDefault()
+    if (!isFormValid) {
+      setError("Ingresa tu correo y contraseña.")
+      return
+    }
 
-  router.push("/dashboard")
-}
+    isSubmittingRef.current = true
 
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      await loginUser({
+        email: email.trim(),
+        password,
+      })
+
+      router.push("/dashboard")
+      router.refresh()
+    } catch (error) {
+      if (error instanceof ApiRequestError && error.status === 403) {
+        router.push(
+          `/auth/resend-verification?email=${encodeURIComponent(email.trim())}`
+        )
+        return
+      }
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudo iniciar sesión. Inténtalo de nuevo."
+
+      setError(message)
+    } finally {
+      setIsLoading(false)
+      isSubmittingRef.current = false
+    }
+  }
 
   return (
-    // Delegamos la responsabilidad del fondo, el centrado y el título al Layout
     <AuthLayout
       title="Bienvenido de vuelta"
       description="Ingresa tus credenciales para acceder a tu cuenta."
       view="login"
     >
-      {/* A partir de aquí, solo nos preocupamos por el formulario */}
       <form onSubmit={handleLogin} className="flex flex-col gap-5 w-full">
-        
         {error && (
           <div className="rounded-lg border border-[#EF4444]/30 bg-[#EF4444]/10 px-4 py-3 text-sm text-[#EF4444]">
             {error}
@@ -42,26 +77,38 @@ const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
         )}
 
         <div className="flex flex-col gap-1.5 relative">
-          <label htmlFor="email" className="text-[#0F172A] text-[10px] font-semibold uppercase tracking-wider">
+          <label
+            htmlFor="email"
+            className="text-[#0F172A] text-[10px] font-semibold uppercase tracking-wider"
+          >
             Correo electrónico
           </label>
+
           <div className="relative flex items-center">
-            <Mail className="absolute left-3 h-4 w-4 text-[#64748B]" />
+            <Mail className="absolute left-3 h-4 w-4 text-[#64748B] pointer-events-none" />
+
             <input
               id="email"
               type="email"
               autoComplete="username"
               placeholder="tu.matricula@utcancun.edu.mx"
-              className="w-full h-10 pl-9 bg-[#E2E8F0]/30 border border-[#E2E8F0] text-[#0F172A] rounded-xl focus:ring-2 focus:ring-[#3B82F6]/20 outline-none transition-all"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              disabled={isLoading}
+              className="w-full h-10 pl-9 bg-[#E2E8F0]/30 border border-[#E2E8F0] text-[#0F172A] rounded-xl focus:ring-2 focus:ring-[#3B82F6]/20 outline-none transition-all disabled:opacity-60"
             />
           </div>
         </div>
 
         <div className="flex flex-col gap-1.5 relative">
           <div className="flex justify-between items-end">
-            <label htmlFor="password" className="text-[#0F172A] text-[10px] font-semibold uppercase tracking-wider">
+            <label
+              htmlFor="password"
+              className="text-[#0F172A] text-[10px] font-semibold uppercase tracking-wider"
+            >
               Contraseña
             </label>
+
             <Link
               href="/auth/forgot-password"
               className="text-[10px] text-[#3B82F6] hover:text-[#3B82F6]/80 transition-colors font-medium uppercase tracking-wider"
@@ -69,73 +116,77 @@ const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
               ¿Olvidaste tu contraseña?
             </Link>
           </div>
+
           <div className="relative flex items-center">
-            <Lock className="absolute left-3 h-4 w-4 text-[#64748B]" />
+            <Lock className="absolute left-3 h-4 w-4 text-[#64748B] pointer-events-none" />
+
             <input
               id="password"
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
               placeholder="••••••••"
-              className="w-full h-10 pl-9 pr-10 bg-[#E2E8F0]/30 border border-[#E2E8F0] text-[#0F172A] rounded-xl focus:ring-2 focus:ring-[#3B82F6]/20 outline-none transition-all"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              disabled={isLoading}
+              className="w-full h-10 pl-9 pr-10 bg-[#E2E8F0]/30 border border-[#E2E8F0] text-[#0F172A] rounded-xl focus:ring-2 focus:ring-[#3B82F6]/20 outline-none transition-all disabled:opacity-60"
             />
+
             <button
               type="button"
+              disabled={isLoading}
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 text-[#64748B] hover:text-[#0F172A] transition-colors"
+              className="absolute right-3 text-[#64748B] hover:text-[#0F172A] transition-colors disabled:opacity-60"
+              aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
             >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {showPassword ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
             </button>
           </div>
         </div>
 
-        {showMfa && (
-          <div className="flex flex-col gap-1.5 p-4 rounded-xl border border-[#3B82F6]/20 bg-[#3B82F6]/5">
-            <label htmlFor="mfa_code" className="text-[#0F172A] text-[10px] font-semibold uppercase tracking-wider flex items-center gap-1.5">
-              <Shield className="h-3.5 w-3.5 text-[#3B82F6]" />
-              Código MFA
-            </label>
-            <input
-              id="mfa_code"
-              type="text"
-              maxLength={6}
-              placeholder="000000"
-              className="w-full bg-[#FFFFFF] border border-[#3B82F6]/30 text-[#0F172A] text-center tracking-[0.5em] text-lg font-mono rounded-xl h-12 focus:ring-2 focus:ring-[#3B82F6]/20 outline-none transition-all"
-            />
-          </div>
-        )}
-
         <div className="mt-2">
           <button
             type="submit"
-            disabled={isLoading}
-            className="flex items-center justify-center w-full h-11 bg-[#3B82F6] text-[#FFFFFF] hover:bg-[#3B82F6]/90 rounded-xl font-medium shadow-lg shadow-[#3B82F6]/20 transition-all disabled:opacity-50"
+            disabled={isLoading || !isFormValid}
+            className={`flex items-center justify-center w-full h-11 rounded-xl font-medium transition-all ${
+              isFormValid && !isLoading
+                ? "bg-[#3B82F6] text-[#FFFFFF] hover:bg-[#3B82F6]/90 shadow-lg shadow-[#3B82F6]/20 cursor-pointer"
+                : "bg-[#E2E8F0] text-[#94A3B8] cursor-not-allowed"
+            }`}
           >
             {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Iniciando sesión...
+              </>
             ) : (
               "Iniciar sesión"
             )}
           </button>
         </div>
-
       </form>
 
-
-      {/* Separador y Botón de Google */}
       <div className="mt-6">
         <div className="relative">
           <div className="absolute inset-0 flex items-center" aria-hidden="true">
-            <div className="w-full border-t border-gray-300"></div>
+            <div className="w-full border-t border-gray-300" />
           </div>
+
           <div className="relative flex justify-center text-sm font-medium leading-6">
-            <span className="bg-white px-6 text-gray-900">O continúa con</span>
+            <span className="bg-white px-6 text-gray-900">
+              O continúa con
+            </span>
           </div>
         </div>
 
         <div className="mt-6">
           <button
             type="button"
-            className="flex w-full items-center justify-center gap-3 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus-visible:ring-transparent"
+            disabled={isLoading}
+            className="flex w-full items-center justify-center gap-3 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus-visible:ring-transparent disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <svg className="h-5 w-5" aria-hidden="true" viewBox="0 0 24 24">
               <path
@@ -155,6 +206,7 @@ const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
                 fill="#34A853"
               />
             </svg>
+
             Iniciar sesión con Google
           </button>
         </div>

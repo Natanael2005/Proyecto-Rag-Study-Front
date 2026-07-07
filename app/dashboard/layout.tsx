@@ -1,14 +1,17 @@
-import type { ReactNode } from "react";
-import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+import type { ReactNode } from "react"
+import { SessionRefresher } from "@/components/auth/session-refresher"
+import { DashboardHeader } from "@/components/dashboard/dashboard-header"
+import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar"
 
 type DashboardLayoutProps = {
-  children: ReactNode;
-};
+  children: ReactNode
+}
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen bg-slate-50">
+      <SessionRefresher />
+
       <div className="flex min-h-screen">
         <DashboardSidebar />
 
@@ -21,5 +24,5 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
       </div>
     </div>
-  );
+  )
 }
