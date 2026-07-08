@@ -25,6 +25,15 @@ type ResendVerificationPayload = {
   email: string
 }
 
+type ForgotPasswordPayload = {
+  email: string
+}
+
+type ResetPasswordPayload = {
+  token: string
+  new_password: string
+}
+
 export type AuthUser = {
   id: string
   first_name: string
@@ -51,6 +60,10 @@ type ApiErrorResponse = {
   message?: string
   error?: string
 } & ApiValidationError
+
+type JsonRequestInit = RequestInit & {
+  apiUrl?: string
+}
 
 export class ApiRequestError extends Error {
   status: number
@@ -103,10 +116,10 @@ function getErrorMessage(data: unknown, fallbackMessage: string) {
   return errorData?.message || errorData?.error || fallbackMessage
 }
 
-async function requestJson(endpoint: string, options: RequestInit = {}) {
-  const apiUrl = getApiUrl()
+async function requestJson(endpoint: string, options: JsonRequestInit = {}) {
+  const { apiUrl = getApiUrl(), ...requestOptions } = options
 
-  const headers = new Headers(options.headers)
+  const headers = new Headers(requestOptions.headers)
 
   if (!headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json")
@@ -117,7 +130,7 @@ async function requestJson(endpoint: string, options: RequestInit = {}) {
   }
 
   const response = await fetch(`${apiUrl}${endpoint}`, {
-    ...options,
+    ...requestOptions,
     headers,
   })
 
@@ -149,9 +162,7 @@ export function registerTeacher(payload: RegisterTeacherPayload) {
 }
 
 export async function loginUser(payload: LoginPayload) {
-  const apiUrl = getApiUrl()
-
-  const response = await fetch(`${apiUrl}/auth/login`, {
+  const response = await fetch("/api/auth/login", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -183,28 +194,45 @@ export async function loginUser(payload: LoginPayload) {
 }
 
 export function getCurrentUser(): Promise<AuthUser> {
-  return requestJson("/users/me", {
+  return requestJson("/api/users/me", {
     method: "GET",
     credentials: "include",
+    apiUrl: "",
   }) as Promise<AuthUser>
 }
 
 export function refreshSession() {
-  return requestJson("/auth/refresh", {
+  return requestJson("/api/auth/refresh", {
     method: "POST",
     credentials: "include",
+    apiUrl: "",
   })
 }
 
 export function logoutUser() {
-  return requestJson("/auth/logout", {
+  return requestJson("/api/auth/logout", {
     method: "POST",
     credentials: "include",
+    apiUrl: "",
   })
 }
 
 export function resendVerificationEmail(payload: ResendVerificationPayload) {
   return requestJson("/auth/resend-verification", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+}
+
+export function forgotPassword(payload: ForgotPasswordPayload) {
+  return requestJson("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+}
+
+export function resetPassword(payload: ResetPasswordPayload) {
+  return requestJson("/auth/reset-password", {
     method: "POST",
     body: JSON.stringify(payload),
   })

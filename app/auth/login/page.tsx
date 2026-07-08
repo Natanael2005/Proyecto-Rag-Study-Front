@@ -41,8 +41,7 @@ export default function LoginPage() {
         password,
       })
 
-      router.push("/dashboard")
-      router.refresh()
+      router.replace("/dashboard")
     } catch (error) {
       if (error instanceof ApiRequestError && error.status === 403) {
         router.push(
