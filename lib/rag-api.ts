@@ -131,6 +131,12 @@ export function deleteRagSession(sessionId: string) {
   })
 }
 
+export function deleteRagMessage(messageId: string) {
+  return requestRag(`/api/rag/messages/${encodeURIComponent(messageId)}`, {
+    method: "DELETE",
+  })
+}
+
 export function getRagSessionMessages(sessionId: string) {
   return requestRag(
     `/api/rag/sessions/${encodeURIComponent(sessionId)}/messages`,

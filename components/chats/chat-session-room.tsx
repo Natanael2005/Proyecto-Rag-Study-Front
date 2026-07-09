@@ -24,6 +24,7 @@ import {
 } from "@/components/chats/create-session-modal"
 import {
   createRagSession,
+  deleteRagMessage,
   deleteRagSession,
   getRagDocuments,
   getRagSessionMessages,
@@ -222,6 +223,10 @@ function getResponseText(data: unknown) {
   )
 }
 
+function isPersistedMessage(message: ChatMessage) {
+  return !message.id.startsWith("local-")
+}
+
 export function ChatSessionRoom({ sessionId }: ChatSessionRoomProps) {
   const router = useRouter()
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -243,6 +248,7 @@ export function ChatSessionRoom({ sessionId }: ChatSessionRoomProps) {
   const [isSending, setIsSending] = useState(false)
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [mutatingSessionId, setMutatingSessionId] = useState<string | null>(null)
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const activeSessionTitle = useMemo(
@@ -541,6 +547,32 @@ export function ChatSessionRoom({ sessionId }: ChatSessionRoomProps) {
     }
   }
 
+  const handleDeleteMessage = async (message: ChatMessage) => {
+    if (!isPersistedMessage(message)) return
+
+    const shouldDelete = window.confirm("Eliminar este mensaje del chat?")
+
+    if (!shouldDelete) return
+
+    try {
+      setDeletingMessageId(message.id)
+      setError(null)
+      await deleteRagMessage(message.id)
+      setMessages((currentMessages) =>
+        currentMessages.filter((currentMessage) => currentMessage.id !== message.id)
+      )
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudo eliminar el mensaje."
+
+      setError(message)
+    } finally {
+      setDeletingMessageId(null)
+    }
+  }
+
   const toggleSetupDocument = (documentId: string) => {
     setSelectedDocumentIds((currentIds) =>
       currentIds.includes(documentId)
@@ -550,7 +582,7 @@ export function ChatSessionRoom({ sessionId }: ChatSessionRoomProps) {
   }
 
   return (
-    <section className="grid h-[calc(100vh-9rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:grid-cols-[18rem_minmax(0,1fr)]">
+    <section className="grid h-[calc(100vh-8rem)] min-h-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:h-[calc(100vh-3rem)] lg:h-[calc(100vh-4rem)] lg:grid-cols-[18rem_minmax(0,1fr)]">
       <aside className="flex min-h-0 flex-col border-b border-slate-200 bg-slate-50/80 p-4 lg:border-b-0 lg:border-r">
         <div className="mb-4">
           <CreateSessionModal
@@ -691,8 +723,11 @@ export function ChatSessionRoom({ sessionId }: ChatSessionRoomProps) {
             messages.map((message) => (
               <ChatBubble
                 key={message.id}
+                canDelete={isPersistedMessage(message)}
                 role={message.role}
                 content={message.content}
+                isDeleting={deletingMessageId === message.id}
+                onDelete={() => void handleDeleteMessage(message)}
               />
             ))
           ) : (

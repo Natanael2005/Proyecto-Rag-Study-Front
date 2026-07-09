@@ -4,9 +4,16 @@ import { useEffect, useRef, useState } from "react"
 import { Loader2, Plus, RefreshCw, UploadCloud } from "lucide-react"
 import {
   DocumentCard,
+  type DocumentAction,
   type DocumentCardData,
 } from "@/components/documents/document-card"
-import { getDocuments, uploadDocument } from "@/lib/documents-api"
+import {
+  deleteDocument,
+  downloadDocument,
+  getDocuments,
+  renameDocument,
+  uploadDocument,
+} from "@/lib/documents-api"
 
 type ApiDocument = Record<string, unknown>
 
@@ -121,12 +128,6 @@ function normalizeDocument(document: unknown, index: number): DocumentCardData {
 function normalizeDocuments(data: unknown) {
   const pickedDocuments = pickDocuments(data)
 
-  console.log("[document-library] respuesta de documentos", {
-    isArray: Array.isArray(data),
-    keys: isRecord(data) ? Object.keys(data) : [],
-    pickedCount: pickedDocuments.length,
-  })
-
   return pickedDocuments.map(normalizeDocument)
 }
 
@@ -134,6 +135,10 @@ export function DocumentLibrary() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const [documents, setDocuments] = useState<DocumentCardData[]>([])
+  const [busyDocument, setBusyDocument] = useState<{
+    id: DocumentCardData["id"]
+    action: DocumentAction
+  } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -191,6 +196,70 @@ export function DocumentLibrary() {
     }
   }, [])
 
+  const runDocumentAction = async (
+    document: DocumentCardData,
+    action: DocumentAction,
+    callback: () => Promise<void>
+  ) => {
+    try {
+      setBusyDocument({ id: document.id, action })
+      setError(null)
+      setSuccessMessage(null)
+
+      await callback()
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudo completar la accion del documento."
+
+      setError(message)
+    } finally {
+      setBusyDocument(null)
+    }
+  }
+
+  const handleDownload = (document: DocumentCardData) => {
+    void runDocumentAction(document, "download", () =>
+      downloadDocument(document.id, document.name)
+    )
+  }
+
+  const handleRename = (document: DocumentCardData) => {
+    const nextTitle = window.prompt("Nuevo nombre del documento", document.name)
+    const normalizedTitle = nextTitle?.trim()
+
+    if (!normalizedTitle || normalizedTitle === document.name) {
+      return
+    }
+
+    void runDocumentAction(document, "rename", async () => {
+      await renameDocument(document.id, normalizedTitle)
+      setSuccessMessage("Documento renombrado correctamente.")
+      await loadDocuments()
+    })
+  }
+
+  const handleDelete = (document: DocumentCardData) => {
+    const shouldDelete = window.confirm(
+      `Estas seguro de que quieres eliminar "${document.name}"?`
+    )
+
+    if (!shouldDelete) {
+      return
+    }
+
+    void runDocumentAction(document, "delete", async () => {
+      await deleteDocument(document.id)
+      setSuccessMessage("Documento eliminado correctamente.")
+      setDocuments((currentDocuments) =>
+        currentDocuments.filter(
+          (currentDocument) => currentDocument.id !== document.id
+        )
+      )
+    })
+  }
+
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -244,7 +313,7 @@ export function DocumentLibrary() {
           <button
             type="button"
             onClick={() => void loadDocuments()}
-            disabled={isLoading || isUploading}
+            disabled={isLoading || isUploading || busyDocument !== null}
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
@@ -262,7 +331,7 @@ export function DocumentLibrary() {
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            disabled={isUploading}
+            disabled={isUploading || busyDocument !== null}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-medium text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isUploading ? (
@@ -300,7 +369,16 @@ export function DocumentLibrary() {
       ) : documents.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {documents.map((document) => (
-            <DocumentCard key={document.id} document={document} />
+            <DocumentCard
+              key={document.id}
+              document={document}
+              busyAction={
+                busyDocument?.id === document.id ? busyDocument.action : null
+              }
+              onDelete={handleDelete}
+              onDownload={handleDownload}
+              onRename={handleRename}
+            />
           ))}
         </div>
       ) : (

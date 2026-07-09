@@ -1,17 +1,10 @@
 import type { NextRequest } from "next/server"
-import {
-  createRagAuthenticatedResponse,
-  getRagApiUrl,
-} from "@/lib/rag-documents-proxy"
+import { proxyRagRequest } from "@/lib/rag-proxy"
 
 type DocumentRouteContext = {
   params: Promise<{
     documentId: string
   }>
-}
-
-function getDocumentUrl(documentId: string) {
-  return `${getRagApiUrl()}/documents/${encodeURIComponent(documentId)}`
 }
 
 export async function DELETE(
@@ -20,19 +13,12 @@ export async function DELETE(
 ) {
   const { documentId } = await params
 
-  return createRagAuthenticatedResponse(
-    request,
-    `DELETE ${documentId}`,
-    (accessToken) =>
-      fetch(getDocumentUrl(documentId), {
-        method: "DELETE",
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        cache: "no-store",
-      })
-  )
+  return proxyRagRequest(request, `/documents/${encodeURIComponent(documentId)}`, {
+    body: null,
+    method: "DELETE",
+    unauthorizedMessage:
+      "No se encontro un token de sesion para eliminar documentos.",
+  })
 }
 
 export async function PATCH(
@@ -40,21 +26,10 @@ export async function PATCH(
   { params }: DocumentRouteContext
 ) {
   const { documentId } = await params
-  const body = await request.text()
 
-  return createRagAuthenticatedResponse(
-    request,
-    `PATCH ${documentId}`,
-    (accessToken) =>
-      fetch(getDocumentUrl(documentId), {
-        method: "PATCH",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body,
-        cache: "no-store",
-      })
-  )
+  return proxyRagRequest(request, `/documents/${encodeURIComponent(documentId)}`, {
+    method: "PATCH",
+    unauthorizedMessage:
+      "No se encontro un token de sesion para renombrar documentos.",
+  })
 }

@@ -116,9 +116,14 @@ function createResponseFromBackend(
 ) {
   const headers = new Headers()
   const contentType = response.headers.get("content-type")
+  const contentDisposition = response.headers.get("content-disposition")
 
   if (contentType) {
     headers.set("Content-Type", contentType)
+  }
+
+  if (contentDisposition) {
+    headers.set("Content-Disposition", contentDisposition)
   }
 
   setCookieHeaders.forEach((cookie) => {
