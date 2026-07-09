@@ -1,90 +1,13 @@
-import {
-  ChatBubble,
-  type ChatMessageRole,
-} from "@/components/chats/chat-bubble";
-import { RotateCcw, Send } from "lucide-react";
+import { ChatSessionRoom } from "@/components/chats/chat-session-room"
 
 type ChatSessionPageProps = {
   params: Promise<{
-    sessionId: string;
-  }>;
-};
-
-type MockMessage = {
-  id: number;
-  role: ChatMessageRole;
-  content: string;
-};
-
-const mockMessages: MockMessage[] = [
-  {
-    id: 1,
-    role: "assistant",
-    content: "Hola, ya cargué los documentos de esta sala. ¿Qué quieres estudiar?",
-  },
-  {
-    id: 2,
-    role: "user",
-    content: "Explícame el tema principal del documento.",
-  },
-  {
-    id: 3,
-    role: "assistant",
-    content:
-      "El documento explica cómo separar la biblioteca de documentos y las sesiones RAG para que cada chat use PDFs específicos.",
-  },
-];
+    sessionId: string
+  }>
+}
 
 export default async function ChatSessionPage({ params }: ChatSessionPageProps) {
-  const { sessionId } = await params;
+  const { sessionId } = await params
 
-  return (
-    <section className="flex h-[calc(100vh-9rem)] flex-col rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <header className="border-b border-slate-200 px-5 py-4">
-        <p className="text-sm font-medium text-blue-600">
-          Sala de estudio
-        </p>
-        <h1 className="text-xl font-bold text-slate-950">
-          {sessionId}
-        </h1>
-      </header>
-
-      <div className="flex-1 space-y-4 overflow-y-auto p-5">
-        {mockMessages.map((message) => (
-          <ChatBubble
-            key={message.id}
-            role={message.role}
-            content={message.content}
-          />
-        ))}
-      </div>
-
-      <div className="border-t border-slate-200 p-4">
-        <div className="mb-3 flex justify-end">
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-          >
-            <RotateCcw className="h-4 w-4" />
-            Regenerar
-          </button>
-        </div>
-
-        <div className="flex gap-3">
-          <input
-            placeholder="Escribe tu pregunta..."
-            className="h-11 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-950 outline-none transition focus:ring-2 focus:ring-blue-600/20"
-          />
-
-          <button
-            type="button"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            <Send className="h-4 w-4" />
-            Enviar
-          </button>
-        </div>
-      </div>
-    </section>
-  );
+  return <ChatSessionRoom sessionId={sessionId} />
 }

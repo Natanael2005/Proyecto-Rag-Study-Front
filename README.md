@@ -30,10 +30,14 @@ La autenticacion esta parcialmente integrada con el backend configurado en
 `NEXT_PUBLIC_API_URL`. Login, registro, verificacion, reenvio de verificacion y
 recuperacion de contrasena llaman endpoints reales.
 
-El dashboard mantiene datos demo para documentos, sesiones y mensajes mientras
-se conectan los endpoints RAG/documentales. Las rutas bajo `/dashboard` se
-validan antes del render con `proxy.ts` y mantienen refresco de sesion en el
-cliente durante la navegacion.
+La biblioteca de documentos usa el backend RAG configurado en `RAG_API_URL`.
+El frontend llama a `/api/documents`, y esa ruta interna agrega el token
+`access_token` de la sesion como `Authorization: Bearer ...`.
+
+El dashboard mantiene datos demo para sesiones y mensajes mientras se conectan
+los endpoints RAG restantes. Las rutas bajo `/dashboard` se validan antes del
+render con `proxy.ts` y mantienen refresco de sesion en el cliente durante la
+navegacion.
 
 ## Estructura
 

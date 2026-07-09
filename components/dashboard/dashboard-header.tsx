@@ -10,6 +10,7 @@ import {
   refreshSession,
   type AuthUser,
 } from "@/lib/auth-api"
+import { getRagSessions } from "@/lib/rag-api"
 
 type HeaderContent = {
   eyebrow: string
@@ -17,6 +18,8 @@ type HeaderContent = {
   description: string
   icon: ElementType
 }
+
+type ApiRecord = Record<string, unknown>
 
 function formatSessionName(sessionId: string) {
   return decodeURIComponent(sessionId)
@@ -29,7 +32,7 @@ function getHeaderContent(pathname: string): HeaderContent {
     return {
       eyebrow: "Biblioteca",
       title: "Mis documentos",
-      description: "Administra tus PDFs antes de usarlos en una sala de estudio.",
+      description: "Administra tus PDFs antes de usarlos en una conversacion.",
       icon: FileText,
     }
   }
@@ -37,20 +40,20 @@ function getHeaderContent(pathname: string): HeaderContent {
   if (pathname === "/dashboard/chats") {
     return {
       eyebrow: "Chats",
-      title: "Salas de estudio",
+      title: "Conversaciones",
       description:
-        "Crea sesiones RAG y conversa con la IA usando documentos específicos.",
+        "Crea chats, revisa el historial y conversa con la IA usando tus PDFs.",
       icon: MessageCircle,
     }
   }
 
   if (pathname.startsWith("/dashboard/chats/")) {
-    const sessionId = pathname.split("/").pop() ?? "sesion"
+    const sessionId = pathname.split("/").pop() ?? "conversacion"
 
     return {
-      eyebrow: "Sala de estudio",
+      eyebrow: "Conversacion",
       title: formatSessionName(sessionId),
-      description: "Haz preguntas sobre los documentos vinculados a esta sesión.",
+      description: "Haz preguntas sobre los documentos vinculados a este chat.",
       icon: Sparkles,
     }
   }
@@ -58,7 +61,7 @@ function getHeaderContent(pathname: string): HeaderContent {
   return {
     eyebrow: "Panel principal",
     title: "Tu espacio de estudio inteligente",
-    description: "Organiza documentos, crea sesiones y estudia con apoyo de IA.",
+    description: "Organiza documentos, crea conversaciones y estudia con apoyo de IA.",
     icon: Sparkles,
   }
 }
@@ -78,14 +81,56 @@ function getRoleLabel(role?: string) {
   return role ?? "Cuenta"
 }
 
+function isRecord(value: unknown): value is ApiRecord {
+  return typeof value === "object" && value !== null
+}
+
+function getString(value: unknown) {
+  return typeof value === "string" ? value : ""
+}
+
+function pickSessions(data: unknown) {
+  if (Array.isArray(data)) {
+    return data
+  }
+
+  if (!isRecord(data)) {
+    return []
+  }
+
+  return [data.sesiones, data.sessions, data.data, data.items, data.results].find(
+    Array.isArray
+  ) ?? []
+}
+
+function findSessionTitle(data: unknown, sessionId: string) {
+  const session = pickSessions(data).find(
+    (item) =>
+      isRecord(item) &&
+      (getString(item.id) === sessionId || getString(item.session_id) === sessionId)
+  )
+
+  return isRecord(session)
+    ? getString(session.title) || getString(session.name)
+    : ""
+}
+
 export function DashboardHeader() {
   const pathname = usePathname()
   const router = useRouter()
 
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isUserLoading, setIsUserLoading] = useState(true)
+  const [activeSessionTitle, setActiveSessionTitle] = useState("")
+  const [isSessionTitleLoading, setIsSessionTitleLoading] = useState(false)
 
   const content = getHeaderContent(pathname)
+  const isChatSessionPath = pathname.startsWith("/dashboard/chats/")
+  const visibleTitle = isChatSessionPath
+    ? isSessionTitleLoading
+      ? "Cargando conversacion..."
+      : activeSessionTitle || "Conversacion"
+    : content.title
   const Icon = content.icon
   const displayName = isUserLoading ? "Cargando..." : getUserDisplayName(user)
   const roleLabel = user ? getRoleLabel(user.role) : "Cuenta"
@@ -136,6 +181,41 @@ export function DashboardHeader() {
     }
   }, [router])
 
+  useEffect(() => {
+    let isMounted = true
+
+    const sessionId = pathname.startsWith("/dashboard/chats/")
+      ? pathname.split("/").pop()
+      : null
+
+    if (!sessionId) return
+
+    const loadSessionTitle = async () => {
+      try {
+        setIsSessionTitleLoading(true)
+        const sessionsData = await getRagSessions()
+
+        if (!isMounted) return
+
+        setActiveSessionTitle(findSessionTitle(sessionsData, sessionId))
+      } catch {
+        if (!isMounted) return
+
+        setActiveSessionTitle("")
+      } finally {
+        if (!isMounted) return
+
+        setIsSessionTitleLoading(false)
+      }
+    }
+
+    void loadSessionTitle()
+
+    return () => {
+      isMounted = false
+    }
+  }, [pathname])
+
   return (
     <header className="border-b border-slate-200 bg-white px-6 py-4 lg:px-8">
       <div className="flex items-center justify-between gap-4">
@@ -150,7 +230,7 @@ export function DashboardHeader() {
             </p>
 
             <h1 className="text-xl font-bold text-slate-950">
-              {content.title}
+              {visibleTitle}
             </h1>
 
             <p className="mt-1 text-sm text-slate-500">
