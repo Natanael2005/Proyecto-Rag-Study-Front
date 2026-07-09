@@ -1,14 +1,23 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
   FileText,
   GraduationCap,
+  Loader2,
   LogOut,
   MessageCircle,
+  UserRound,
 } from "lucide-react"
-import { logoutUser } from "@/lib/auth-api"
+import {
+  ApiRequestError,
+  getCurrentUser,
+  logoutUser,
+  refreshSession,
+  type AuthUser,
+} from "@/lib/auth-api"
 
 const navItems = [
   {
@@ -23,9 +32,82 @@ const navItems = [
   },
 ]
 
+function getUserDisplayName(user: AuthUser | null) {
+  if (!user) return "Usuario"
+
+  const fullName = `${user.first_name} ${user.last_name}`.trim()
+
+  return fullName || user.email
+}
+
+function getRoleLabel(role?: string) {
+  if (role === "student") return "Alumno"
+  if (role === "teacher") return "Profesor"
+
+  return role ?? "Cuenta"
+}
+
+function getUserInitials(user: AuthUser | null) {
+  const displayName = getUserDisplayName(user)
+  const initials = displayName
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
+
+  return initials || "U"
+}
+
 export function DashboardSidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [isUserLoading, setIsUserLoading] = useState(true)
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadUser = async () => {
+      try {
+        setIsUserLoading(true)
+        const currentUser = await getCurrentUser()
+
+        if (!isMounted) return
+
+        setUser(currentUser)
+      } catch (error) {
+        if (error instanceof ApiRequestError && error.status === 401) {
+          try {
+            await refreshSession()
+            const currentUser = await getCurrentUser()
+
+            if (!isMounted) return
+
+            setUser(currentUser)
+          } catch {
+            if (!isMounted) return
+
+            router.replace("/auth/login")
+          }
+        } else {
+          if (!isMounted) return
+
+          setUser(null)
+        }
+      } finally {
+        if (!isMounted) return
+
+        setIsUserLoading(false)
+      }
+    }
+
+    void loadUser()
+
+    return () => {
+      isMounted = false
+    }
+  }, [router])
 
   const handleLogout = async () => {
     try {
@@ -85,6 +167,29 @@ export function DashboardSidebar() {
         </div>
 
         <div className="mt-auto border-t border-slate-200 pt-4">
+          <div className="mb-3 rounded-2xl bg-slate-50 p-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-sm font-bold text-blue-600">
+                {isUserLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : user ? (
+                  getUserInitials(user)
+                ) : (
+                  <UserRound className="h-4 w-4" />
+                )}
+              </div>
+
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-slate-950">
+                  {isUserLoading ? "Cargando..." : getUserDisplayName(user)}
+                </p>
+                <p className="mt-0.5 truncate text-xs font-medium text-slate-500">
+                  {user ? getRoleLabel(user.role) : "Cuenta"}
+                </p>
+              </div>
+            </div>
+          </div>
+
           <button
             type="button"
             onClick={handleLogout}
