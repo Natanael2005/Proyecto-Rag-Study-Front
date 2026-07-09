@@ -1,0 +1,219 @@
+import type { NextRequest } from "next/server"
+
+type HeadersWithSetCookie = Headers & {
+  getSetCookie?: () => string[]
+}
+
+type RefreshedSession = {
+  accessToken: string
+  setCookieHeaders: string[]
+}
+
+export type RagRequestHandler = (accessToken: string) => Promise<Response>
+
+export function getRagApiUrl() {
+  const apiUrl = process.env.RAG_API_URL
+
+  if (!apiUrl) {
+    throw new Error("Falta configurar RAG_API_URL en .env.local")
+  }
+
+  return apiUrl
+}
+
+function getAuthApiUrl() {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL
+
+  if (!apiUrl) {
+    throw new Error("Falta configurar NEXT_PUBLIC_API_URL en .env.local")
+  }
+
+  return apiUrl
+}
+
+function normalizeAccessToken(accessToken: string) {
+  let normalizedToken = accessToken.trim()
+
+  try {
+    normalizedToken = decodeURIComponent(normalizedToken)
+  } catch {
+    // Si no viene URL-encoded, seguimos con el valor original.
+  }
+
+  return normalizedToken
+    .trim()
+    .replace(/^["']+|["']+$/g, "")
+    .trim()
+    .replace(/^Bearer\s+/i, "")
+    .trim()
+    .replace(/^["']+|["']+$/g, "")
+}
+
+function getAccessToken(request: NextRequest) {
+  const accessToken = request.cookies.get("access_token")?.value
+
+  if (!accessToken) {
+    return null
+  }
+
+  return normalizeAccessToken(accessToken)
+}
+
+function normalizeSetCookieHeader(cookie: string, request: NextRequest) {
+  let normalizedCookie = cookie.replace(/;\s*Domain=[^;]+/gi, "")
+
+  if (request.nextUrl.protocol === "http:") {
+    normalizedCookie = normalizedCookie.replace(/;\s*Secure/gi, "")
+    normalizedCookie = normalizedCookie.replace(
+      /;\s*SameSite=None/gi,
+      "; SameSite=Lax"
+    )
+  }
+
+  return normalizedCookie
+}
+
+function splitSetCookieHeader(header: string) {
+  return header.split(/,(?=\s*[^;,\s]+=)/g).map((cookie) => cookie.trim())
+}
+
+function getSetCookieHeaders(headers: Headers) {
+  const headersWithSetCookie = headers as HeadersWithSetCookie
+  const setCookieHeaders = headersWithSetCookie.getSetCookie?.() ?? []
+
+  if (setCookieHeaders.length > 0) {
+    return setCookieHeaders
+  }
+
+  const setCookie = headers.get("set-cookie")
+
+  return setCookie ? splitSetCookieHeader(setCookie) : []
+}
+
+function extractAccessTokenFromSetCookie(setCookieHeaders: string[]) {
+  const accessCookie = setCookieHeaders.find((cookie) =>
+    cookie.toLowerCase().startsWith("access_token=")
+  )
+
+  if (!accessCookie) {
+    return null
+  }
+
+  const cookieValue = accessCookie.split(";")[0]?.split("=").slice(1).join("=")
+
+  return cookieValue ? normalizeAccessToken(cookieValue) : null
+}
+
+function logAccessTokenForDebug(method: string, accessToken: string) {
+  console.log("[documents-api] access_token enviado", {
+    method,
+    length: accessToken.length,
+    startsWith: accessToken.slice(0, 16),
+    endsWith: accessToken.slice(-16),
+    authorizationHeaderPreview: `Bearer ${accessToken.slice(0, 16)}...${accessToken.slice(-16)}`,
+  })
+}
+
+function createUnauthorizedResponse() {
+  return Response.json(
+    { message: "No se encontro un token de sesion para consultar documentos." },
+    { status: 401 }
+  )
+}
+
+function createResponseFromBackend(
+  response: Response,
+  request: NextRequest,
+  setCookieHeaders: string[] = []
+) {
+  const headers = new Headers()
+  const contentType = response.headers.get("content-type")
+  const contentDisposition = response.headers.get("content-disposition")
+
+  if (contentType) {
+    headers.set("Content-Type", contentType)
+  }
+
+  if (contentDisposition) {
+    headers.set("Content-Disposition", contentDisposition)
+  }
+
+  setCookieHeaders.forEach((cookie) => {
+    headers.append("set-cookie", normalizeSetCookieHeader(cookie, request))
+  })
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  })
+}
+
+async function refreshAccessToken(
+  request: NextRequest
+): Promise<RefreshedSession | null> {
+  const cookieHeader = request.headers.get("cookie")
+
+  if (!cookieHeader) {
+    return null
+  }
+
+  const response = await fetch(`${getAuthApiUrl()}/auth/refresh`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      Cookie: cookieHeader,
+    },
+    cache: "no-store",
+  })
+
+  if (!response.ok) {
+    return null
+  }
+
+  const setCookieHeaders = getSetCookieHeaders(response.headers)
+  const accessToken = extractAccessTokenFromSetCookie(setCookieHeaders)
+
+  if (!accessToken) {
+    return null
+  }
+
+  return {
+    accessToken,
+    setCookieHeaders,
+  }
+}
+
+export async function createRagAuthenticatedResponse(
+  request: NextRequest,
+  method: string,
+  requestBackend: RagRequestHandler
+) {
+  let accessToken = getAccessToken(request)
+
+  if (!accessToken) {
+    return createUnauthorizedResponse()
+  }
+
+  logAccessTokenForDebug(method, accessToken)
+
+  let response = await requestBackend(accessToken)
+
+  if (response.status === 401) {
+    const refreshedSession = await refreshAccessToken(request)
+
+    if (refreshedSession) {
+      accessToken = refreshedSession.accessToken
+      logAccessTokenForDebug(`${method} retry`, accessToken)
+      response = await requestBackend(accessToken)
+
+      return createResponseFromBackend(
+        response,
+        request,
+        refreshedSession.setCookieHeaders
+      )
+    }
+  }
+
+  return createResponseFromBackend(response, request)
+}
