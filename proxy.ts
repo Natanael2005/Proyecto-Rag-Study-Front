@@ -22,6 +22,38 @@ function splitSetCookieHeader(header: string) {
   return header.split(/,(?=\s*[^;,\s]+=)/g).map((cookie) => cookie.trim())
 }
 
+async function fetchWithSession(
+  apiUrl: string,
+  endpoint: string,
+  cookieHeader: string,
+  method = "GET"
+) {
+  return fetch(`${apiUrl}${endpoint}`, {
+    method,
+    headers: {
+      Accept: "application/json",
+      Cookie: cookieHeader,
+    },
+    cache: "no-store",
+  })
+}
+
+function appendSetCookieHeaders(
+  response: NextResponse,
+  sourceResponse: Response,
+  request: NextRequest
+) {
+  const setCookie = sourceResponse.headers.get("set-cookie")
+
+  if (!setCookie) {
+    return
+  }
+
+  splitSetCookieHeader(setCookie).forEach((cookie) => {
+    response.headers.append("set-cookie", normalizeSetCookieHeader(cookie, request))
+  })
+}
+
 export async function proxy(request: NextRequest) {
   const apiUrl = getApiUrl()
   const loginUrl = new URL("/auth/login", request.url)
@@ -38,27 +70,33 @@ export async function proxy(request: NextRequest) {
   }
 
   try {
-    const authResponse = await fetch(`${apiUrl}/auth/refresh`, {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        Cookie: cookieHeader,
-      },
-      cache: "no-store",
-    })
+    const profileResponse = await fetchWithSession(
+      apiUrl,
+      "/users/me",
+      cookieHeader
+    )
+
+    if (profileResponse.ok) {
+      return NextResponse.next()
+    }
+
+    if (profileResponse.status !== 401) {
+      return NextResponse.redirect(loginUrl)
+    }
+
+    const authResponse = await fetchWithSession(
+      apiUrl,
+      "/auth/refresh",
+      cookieHeader,
+      "POST"
+    )
 
     if (!authResponse.ok) {
       return NextResponse.redirect(loginUrl)
     }
 
     const response = NextResponse.next()
-    const setCookie = authResponse.headers.get("set-cookie")
-
-    if (setCookie) {
-      splitSetCookieHeader(setCookie).forEach((cookie) => {
-        response.headers.append("set-cookie", normalizeSetCookieHeader(cookie, request))
-      })
-    }
+    appendSetCookieHeaders(response, authResponse, request)
 
     return response
   } catch {
