@@ -22,8 +22,6 @@ export function SessionRefresher() {
       }
     }
 
-    void refresh()
-
     const intervalId = window.setInterval(() => {
       void refresh()
     }, REFRESH_INTERVAL)

@@ -9,7 +9,8 @@ type RefreshedSession = {
   setCookieHeaders: string[]
 }
 
-type ProxyRagRequestOptions = {
+export type ProxyRagRequestOptions = {
+  apiUrl?: string
   body?: BodyInit | null
   headers?: HeadersInit
   method?: string
@@ -210,7 +211,7 @@ async function fetchRagWithToken(
 
   headers.set("Authorization", `Bearer ${accessToken}`)
 
-  return fetch(`${getRagApiUrl()}${endpoint}`, {
+  return fetch(`${options.apiUrl ?? getRagApiUrl()}${endpoint}`, {
     method,
     headers,
     body,

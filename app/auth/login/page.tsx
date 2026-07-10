@@ -7,6 +7,22 @@ import { Eye, EyeOff, Loader2, Mail, Lock } from "lucide-react"
 import { AuthLayout } from "@/components/auth-layout"
 import { ApiRequestError, loginUser } from "@/lib/auth-api"
 
+function getPostLoginRedirectPath() {
+  const fallbackPath = "/dashboard"
+
+  if (typeof window === "undefined") {
+    return fallbackPath
+  }
+
+  const nextPath = new URLSearchParams(window.location.search).get("next")
+
+  if (!nextPath || !nextPath.startsWith("/") || nextPath.startsWith("//")) {
+    return fallbackPath
+  }
+
+  return nextPath
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const isSubmittingRef = useRef(false)
@@ -41,7 +57,7 @@ export default function LoginPage() {
         password,
       })
 
-      router.replace("/dashboard")
+      router.replace(getPostLoginRedirectPath())
     } catch (error) {
       if (error instanceof ApiRequestError && error.status === 403) {
         router.push(

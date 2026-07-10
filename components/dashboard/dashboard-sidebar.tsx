@@ -9,6 +9,7 @@ import {
   Loader2,
   LogOut,
   MessageCircle,
+  School,
   UserRound,
 } from "lucide-react"
 import {
@@ -24,6 +25,11 @@ const navItems = [
     label: "Biblioteca",
     href: "/dashboard/biblioteca",
     icon: FileText,
+  },
+  {
+    label: "Salones",
+    href: "/dashboard/organizaciones",
+    icon: School,
   },
   {
     label: "Chats",
