@@ -278,7 +278,7 @@ export function OrganizationsDashboard() {
           <h1 className="mt-2 text-3xl font-bold text-slate-950">Salones</h1>
           <p className="mt-2 max-w-2xl text-slate-600">
             Crea grupos de estudio, administra alumnos y prepara el espacio para
-            flashcards compartidas por salon.
+            decks, cards y quizzes compartidos por salon.
           </p>
         </div>
 
@@ -558,7 +558,7 @@ export function OrganizationsDashboard() {
           </h2>
           <p className="mt-2 max-w-md text-sm text-slate-500">
             {isTeacher
-              ? "Crea tu primer salon para invitar alumnos y preparar flashcards compartidas."
+              ? "Crea tu primer salon para invitar alumnos y preparar decks compartidos."
               : "Unete a un salon con el codigo que te comparta tu profesor."}
           </p>
         </div>
