@@ -53,6 +53,7 @@ export type LlmEditProposal = {
 
 export type CardView = {
   user_id: string
+  viewer_name?: string
   flashcard_id: string
   viewed_at: string
 }
@@ -125,15 +126,16 @@ function getDeckEndpoint(deckId: string) {
 }
 
 export function getDecks(organizationId?: string) {
-  const searchParams = new URLSearchParams()
-
   if (organizationId) {
-    searchParams.set("organization_id", organizationId)
+    return requestDecks(
+      `/api/decks/organization/${encodeURIComponent(organizationId)}`,
+      {
+        method: "GET",
+      }
+    )
   }
 
-  const query = searchParams.toString()
-
-  return requestDecks(`/api/decks${query ? `?${query}` : ""}`, {
+  return requestDecks("/api/decks", {
     method: "GET",
   })
 }

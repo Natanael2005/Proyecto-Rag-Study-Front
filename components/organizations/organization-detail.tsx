@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import {
   BookOpen,
   Check,
+  ChevronDown,
   Copy,
   Edit3,
   Eye,
@@ -288,6 +289,7 @@ function normalizeCardView(item: unknown, index: number): CardView {
 
   return {
     user_id: getString(item.user_id) || String(index),
+    viewer_name: getString(item.viewer_name),
     flashcard_id: getString(item.flashcard_id),
     viewed_at: getString(item.viewed_at),
   }
@@ -562,6 +564,9 @@ export function OrganizationDetail({ organizationId }: OrganizationDetailProps) 
   const [quizQuestionForms, setQuizQuestionForms] = useState<
     QuizQuestionForm[]
   >([createEmptyQuizQuestionForm()])
+  const [isEmptyDeckFormOpen, setIsEmptyDeckFormOpen] = useState(false)
+  const [isAiDeckFormOpen, setIsAiDeckFormOpen] = useState(false)
+  const [isQuizFormOpen, setIsQuizFormOpen] = useState(false)
   const [cardFront, setCardFront] = useState("")
   const [cardBack, setCardBack] = useState("")
   const [editingCardId, setEditingCardId] = useState<string | null>(null)
@@ -813,6 +818,7 @@ export function OrganizationDetail({ organizationId }: OrganizationDetailProps) 
         organization_id: organizationId,
       })
       setDeckTitle("")
+      setIsEmptyDeckFormOpen(false)
       setSuccessMessage("Deck creado correctamente.")
       await handleRefreshDecks()
     } catch (error) {
@@ -846,6 +852,7 @@ export function OrganizationDetail({ organizationId }: OrganizationDetailProps) 
       setAiDeckTitle("")
       setAiDocumentId("")
       setAiCardCount(10)
+      setIsAiDeckFormOpen(false)
       setSuccessMessage("Deck generado con IA correctamente.")
       await handleRefreshDecks()
     } catch (error) {
@@ -1092,6 +1099,7 @@ export function OrganizationDetail({ organizationId }: OrganizationDetailProps) 
       setQuizTitle("")
       setQuizDocumentId("")
       setQuizQuestionForms([createEmptyQuizQuestionForm()])
+      setIsQuizFormOpen(false)
       setSuccessMessage("Quiz creado correctamente.")
       await handleRefreshQuizzes()
     } catch (error) {
@@ -1687,122 +1695,164 @@ export function OrganizationDetail({ organizationId }: OrganizationDetailProps) 
           </div>
 
           <div className="h-[36rem] space-y-5 overflow-y-auto border-t border-slate-100 bg-slate-50/40 p-5">
-            <div
-              className={`gap-4 xl:grid-cols-2 ${
-                selectedDeck ? "hidden" : "grid"
-              }`}
-            >
+            {!selectedDeck && (
+              <div className="grid gap-3 xl:grid-cols-2">
               <form
                 onSubmit={handleCreateDeck}
-                className="rounded-2xl border border-slate-200 bg-white p-4"
+                className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
               >
-                <div className="mb-4 flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                    <Plus className="h-5 w-5" />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setIsEmptyDeckFormOpen((isOpen) => !isOpen)
+                  }
+                  className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-slate-50"
+                  aria-expanded={isEmptyDeckFormOpen}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                      <Plus className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-950">
+                        Deck vacio
+                      </h3>
+                      <p className="text-sm text-slate-500">
+                        Solo necesita un nombre. Las cards se agregaran despues.
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-950">Deck vacio</h3>
-                    <p className="text-sm text-slate-500">
-                      Solo necesita un nombre. Las cards se agregaran despues.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <input
-                    type="text"
-                    value={deckTitle}
-                    onChange={(event) => setDeckTitle(event.target.value)}
-                    placeholder="Nombre del deck"
-                    className="min-h-12 flex-1 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  <ChevronDown
+                    className={`h-5 w-5 shrink-0 text-slate-400 transition ${
+                      isEmptyDeckFormOpen ? "rotate-180" : ""
+                    }`}
                   />
-                  <button
-                    type="submit"
-                    disabled={!deckTitle.trim() || isMutating}
-                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
-                  >
-                    {isMutating ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Plus className="h-4 w-4" />
-                    )}
-                    Crear
-                  </button>
-                </div>
+                </button>
+
+                {isEmptyDeckFormOpen && (
+                  <div className="border-t border-slate-100 p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <input
+                        type="text"
+                        value={deckTitle}
+                        onChange={(event) => setDeckTitle(event.target.value)}
+                        placeholder="Nombre del deck"
+                        className="min-h-12 flex-1 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                      />
+                      <button
+                        type="submit"
+                        disabled={!deckTitle.trim() || isMutating}
+                        className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                      >
+                        {isMutating ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Plus className="h-4 w-4" />
+                        )}
+                        Crear
+                      </button>
+                    </div>
+                  </div>
+                )}
               </form>
 
               <form
                 onSubmit={handleCreateAiDeck}
-                className="rounded-2xl border border-slate-200 bg-white p-4"
+                className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
               >
-                <div className="mb-4 flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                    <FileText className="h-5 w-5" />
+                <button
+                  type="button"
+                  onClick={() => setIsAiDeckFormOpen((isOpen) => !isOpen)}
+                  className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-slate-50"
+                  aria-expanded={isAiDeckFormOpen}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                      <FileText className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-950">
+                        Deck con IA
+                      </h3>
+                      <p className="text-sm text-slate-500">
+                        Usa un documento procesado de Biblioteca para generar
+                        cards automaticamente.
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-950">Deck con IA</h3>
-                    <p className="text-sm text-slate-500">
-                      Usa un documento procesado de Biblioteca para generar
-                      cards automaticamente.
-                    </p>
-                  </div>
-                </div>
+                  <ChevronDown
+                    className={`h-5 w-5 shrink-0 text-slate-400 transition ${
+                      isAiDeckFormOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
 
-                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_7rem_auto]">
-                  <input
-                    type="text"
-                    value={aiDeckTitle}
-                    onChange={(event) => setAiDeckTitle(event.target.value)}
-                    placeholder="Nombre del deck"
-                    className="min-h-12 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  />
-                  <select
-                    value={aiDocumentId}
-                    onChange={(event) => setAiDocumentId(event.target.value)}
-                    className="min-h-12 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  >
-                    <option value="">Documento</option>
-                    {readyDocuments.map((document) => (
-                      <option key={document.id} value={document.id}>
-                        {document.name}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={aiCardCount}
-                    onChange={(event) =>
-                      setAiCardCount(Number(event.target.value) || 1)
-                    }
-                    className="min-h-12 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                    aria-label="Cantidad de cards"
-                  />
-                  <button
-                    type="submit"
-                    disabled={
-                      !aiDeckTitle.trim() || !aiDocumentId || isCreatingAiDeck
-                    }
-                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
-                  >
-                    {isCreatingAiDeck ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <FileText className="h-4 w-4" />
+                {isAiDeckFormOpen && (
+                  <div className="space-y-3 border-t border-slate-100 p-4">
+                    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_7rem_auto]">
+                      <input
+                        type="text"
+                        value={aiDeckTitle}
+                        onChange={(event) =>
+                          setAiDeckTitle(event.target.value)
+                        }
+                        placeholder="Nombre del deck"
+                        className="min-h-12 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                      />
+                      <select
+                        value={aiDocumentId}
+                        onChange={(event) =>
+                          setAiDocumentId(event.target.value)
+                        }
+                        className="min-h-12 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                      >
+                        <option value="">Documento</option>
+                        {readyDocuments.map((document) => (
+                          <option key={document.id} value={document.id}>
+                            {document.name}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={aiCardCount}
+                        onChange={(event) =>
+                          setAiCardCount(Number(event.target.value) || 1)
+                        }
+                        className="min-h-12 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                        aria-label="Cantidad de cards"
+                      />
+                      <button
+                        type="submit"
+                        disabled={
+                          !aiDeckTitle.trim() ||
+                          !aiDocumentId ||
+                          isCreatingAiDeck
+                        }
+                        className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                      >
+                        {isCreatingAiDeck ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <FileText className="h-4 w-4" />
+                        )}
+                        Generar
+                      </button>
+                    </div>
+
+                    {readyDocuments.length === 0 && (
+                      <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                        No hay documentos listos en Biblioteca para generar
+                        decks con IA.
+                      </p>
                     )}
-                    Generar
-                  </button>
-                </div>
-
-                {readyDocuments.length === 0 && (
-                  <p className="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                    No hay documentos listos en Biblioteca para generar decks con
-                    IA.
-                  </p>
+                  </div>
                 )}
               </form>
-            </div>
+              </div>
+            )}
 
             {selectedDeck && (
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -2169,7 +2219,7 @@ export function OrganizationDetail({ organizationId }: OrganizationDetailProps) 
                                       className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600"
                                     >
                                       <p className="font-semibold text-slate-950">
-                                        {view.user_id}
+                                        {view.viewer_name || view.user_id}
                                       </p>
                                       <p>{formatDate(view.viewed_at)}</p>
                                     </div>
@@ -2301,155 +2351,175 @@ export function OrganizationDetail({ organizationId }: OrganizationDetailProps) 
             {!selectedQuiz && (
               <form
                 onSubmit={handleCreateQuiz}
-                className="rounded-2xl border border-slate-200 bg-white p-4"
+                className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
               >
-                <div className="mb-4 flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                    <Plus className="h-5 w-5" />
+                <button
+                  type="button"
+                  onClick={() => setIsQuizFormOpen((isOpen) => !isOpen)}
+                  className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-slate-50"
+                  aria-expanded={isQuizFormOpen}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                      <Plus className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-950">
+                        Crear quiz manual
+                      </h3>
+                      <p className="text-sm text-slate-500">
+                        Define el titulo y las preguntas que resolveran los
+                        miembros. Puedes asociar un documento si aplica.
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-950">
-                      Crear quiz manual
-                    </h3>
-                    <p className="text-sm text-slate-500">
-                      Define el titulo y las preguntas que resolveran los
-                      miembros. Puedes asociar un documento si aplica.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid gap-3 lg:grid-cols-2">
-                  <input
-                    type="text"
-                    value={quizTitle}
-                    onChange={(event) => setQuizTitle(event.target.value)}
-                    placeholder="Titulo del quiz"
-                    className="min-h-12 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  <ChevronDown
+                    className={`h-5 w-5 shrink-0 text-slate-400 transition ${
+                      isQuizFormOpen ? "rotate-180" : ""
+                    }`}
                   />
-                  <select
-                    value={quizDocumentId}
-                    onChange={(event) => setQuizDocumentId(event.target.value)}
-                    className="min-h-12 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  >
-                    <option value="">Documento opcional</option>
-                    {readyDocuments.map((document) => (
-                      <option key={document.id} value={document.id}>
-                        {document.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                </button>
 
-                <div className="mt-4 space-y-3">
-                  {quizQuestionForms.map((question, questionIndex) => (
-                    <div
-                      key={question.id}
-                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                    >
-                      <div className="mb-3 flex items-center justify-between gap-3">
-                        <p className="text-sm font-semibold text-slate-950">
-                          Pregunta {questionIndex + 1}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveQuizQuestion(question.id)}
-                          disabled={quizQuestionForms.length <= 1}
-                          className="rounded-lg p-2 text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
-                          aria-label="Quitar pregunta"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-
-                      <textarea
-                        value={question.question}
-                        onChange={(event) =>
-                          handleQuizQuestionChange(
-                            question.id,
-                            "question",
-                            event.target.value
-                          )
-                        }
-                        placeholder="Escribe la pregunta"
-                        className="min-h-20 w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                {isQuizFormOpen && (
+                  <div className="border-t border-slate-100 p-4">
+                    <div className="grid gap-3 lg:grid-cols-2">
+                      <input
+                        type="text"
+                        value={quizTitle}
+                        onChange={(event) => setQuizTitle(event.target.value)}
+                        placeholder="Titulo del quiz"
+                        className="min-h-12 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                       />
+                      <select
+                        value={quizDocumentId}
+                        onChange={(event) =>
+                          setQuizDocumentId(event.target.value)
+                        }
+                        className="min-h-12 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                      >
+                        <option value="">Documento opcional</option>
+                        {readyDocuments.map((document) => (
+                          <option key={document.id} value={document.id}>
+                            {document.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                      <div className="mt-3 grid gap-2 md:grid-cols-2">
-                        {question.options.map((option, optionIndex) => (
-                          <input
-                            key={`${question.id}-option-${optionIndex}`}
-                            value={option}
+                    <div className="mt-4 space-y-3">
+                      {quizQuestionForms.map((question, questionIndex) => (
+                        <div
+                          key={question.id}
+                          className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                        >
+                          <div className="mb-3 flex items-center justify-between gap-3">
+                            <p className="text-sm font-semibold text-slate-950">
+                              Pregunta {questionIndex + 1}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleRemoveQuizQuestion(question.id)
+                              }
+                              disabled={quizQuestionForms.length <= 1}
+                              className="rounded-lg p-2 text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+                              aria-label="Quitar pregunta"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+
+                          <textarea
+                            value={question.question}
                             onChange={(event) =>
-                              handleQuizOptionChange(
+                              handleQuizQuestionChange(
                                 question.id,
-                                optionIndex,
+                                "question",
                                 event.target.value
                               )
                             }
-                            placeholder={`Opcion ${optionIndex + 1}`}
-                            className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            placeholder="Escribe la pregunta"
+                            className="min-h-20 w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                           />
-                        ))}
-                      </div>
 
-                      <div className="mt-3 grid gap-2 md:grid-cols-2">
-                        <input
-                          value={question.correct_answer}
-                          onChange={(event) =>
-                            handleQuizQuestionChange(
-                              question.id,
-                              "correct_answer",
-                              event.target.value
-                            )
-                          }
-                          placeholder="Respuesta correcta exacta"
-                          className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                        />
-                        <input
-                          value={question.explanation}
-                          onChange={(event) =>
-                            handleQuizQuestionChange(
-                              question.id,
-                              "explanation",
-                              event.target.value
-                            )
-                          }
-                          placeholder="Explicacion opcional"
-                          className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                        />
-                      </div>
+                          <div className="mt-3 grid gap-2 md:grid-cols-2">
+                            {question.options.map((option, optionIndex) => (
+                              <input
+                                key={`${question.id}-option-${optionIndex}`}
+                                value={option}
+                                onChange={(event) =>
+                                  handleQuizOptionChange(
+                                    question.id,
+                                    optionIndex,
+                                    event.target.value
+                                  )
+                                }
+                                placeholder={`Opcion ${optionIndex + 1}`}
+                                className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                              />
+                            ))}
+                          </div>
+
+                          <div className="mt-3 grid gap-2 md:grid-cols-2">
+                            <input
+                              value={question.correct_answer}
+                              onChange={(event) =>
+                                handleQuizQuestionChange(
+                                  question.id,
+                                  "correct_answer",
+                                  event.target.value
+                                )
+                              }
+                              placeholder="Respuesta correcta exacta"
+                              className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            />
+                            <input
+                              value={question.explanation}
+                              onChange={(event) =>
+                                handleQuizQuestionChange(
+                                  question.id,
+                                  "explanation",
+                                  event.target.value
+                                )
+                              }
+                              placeholder="Explicacion opcional"
+                              className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            />
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
 
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-between">
-                  <button
-                    type="button"
-                    onClick={handleAddQuizQuestion}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Agregar pregunta
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isCreatingQuiz}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
-                  >
-                    {isCreatingQuiz ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Check className="h-4 w-4" />
+                    <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-between">
+                      <button
+                        type="button"
+                        onClick={handleAddQuizQuestion}
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Agregar pregunta
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isCreatingQuiz}
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                      >
+                        {isCreatingQuiz ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Check className="h-4 w-4" />
+                        )}
+                        Crear quiz
+                      </button>
+                    </div>
+
+                    {readyDocuments.length === 0 && (
+                      <p className="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                        No hay documentos listos en Biblioteca, pero puedes
+                        crear el quiz manual sin asociarlo a un documento.
+                      </p>
                     )}
-                    Crear quiz
-                  </button>
-                </div>
-
-                {readyDocuments.length === 0 && (
-                  <p className="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                    No hay documentos listos en Biblioteca, pero puedes crear el
-                    quiz manual sin asociarlo a un documento.
-                  </p>
+                  </div>
                 )}
               </form>
             )}
