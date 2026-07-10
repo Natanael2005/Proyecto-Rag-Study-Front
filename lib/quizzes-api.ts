@@ -12,6 +12,7 @@ export type QuizQuestion = {
 export type Quiz = {
   id: string
   user_id?: string
+  organization_id?: string
   document_id?: string | null
   title: string
   created_at?: string
@@ -22,6 +23,7 @@ export type Quiz = {
 
 export type CreateQuizPayload = {
   title: string
+  organization_id: string
   document_id?: string
   questions: Array<{
     question: string
@@ -143,7 +145,16 @@ function getAttemptEndpoint(attemptId: string) {
   return `/api/quizzes/attempts/${encodeURIComponent(attemptId)}`
 }
 
-export function getQuizzes() {
+export function getQuizzes(organizationId?: string) {
+  if (organizationId) {
+    return requestQuizzes(
+      `/api/quizzes/organization/${encodeURIComponent(organizationId)}`,
+      {
+        method: "GET",
+      }
+    )
+  }
+
   return requestQuizzes("/api/quizzes", {
     method: "GET",
   })

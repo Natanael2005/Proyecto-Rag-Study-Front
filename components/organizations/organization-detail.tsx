@@ -380,6 +380,7 @@ function normalizeQuiz(item: unknown, index: number): Quiz {
   return {
     id: getString(item.id) || String(index),
     user_id: getString(item.user_id),
+    organization_id: getString(item.organization_id),
     document_id: getString(item.document_id) || null,
     title: getString(item.title) || `Quiz ${index + 1}`,
     created_at: getString(item.created_at),
@@ -624,6 +625,9 @@ export function OrganizationDetail({ organizationId }: OrganizationDetailProps) 
   )
   const selectedCards = selectedDeck?.cards ?? []
   const selectedQuizQuestions = selectedQuiz?.questions ?? []
+  const selectedQuizQuestionCount = selectedQuiz
+    ? getQuizQuestionCount(selectedQuiz)
+    : 0
   const explicitlySeenCardCount = selectedCards.filter((card) => card.is_seen).length
   const viewedByMeCount = isLoadingUnseenCards
     ? explicitlySeenCardCount
@@ -647,7 +651,7 @@ export function OrganizationDetail({ organizationId }: OrganizationDetailProps) 
       getMyOrganizations(),
       getOrganizationMembers(organizationId),
       getDecks(organizationId).catch(() => []),
-      getQuizzes().catch(() => []),
+      getQuizzes(organizationId).catch(() => []),
       getDocuments().catch(() => []),
     ])
     const canManageOrganization = currentUserData.role === "teacher"
@@ -983,7 +987,7 @@ export function OrganizationDetail({ organizationId }: OrganizationDetailProps) 
       setError(null)
 
       const [quizzesData, documentsData] = await Promise.all([
-        getQuizzes(),
+        getQuizzes(organizationId),
         getDocuments().catch(() => []),
       ])
 
@@ -1089,6 +1093,7 @@ export function OrganizationDetail({ organizationId }: OrganizationDetailProps) 
 
       await createQuiz({
         title,
+        organization_id: organizationId,
         ...(quizDocumentId ? { document_id: quizDocumentId } : {}),
         questions: questions.map((question) => ({
           ...question,
@@ -2540,7 +2545,7 @@ export function OrganizationDetail({ organizationId }: OrganizationDetailProps) 
                       {selectedQuiz.title}
                     </h3>
                     <p className="mt-1 text-sm text-slate-500">
-                      {selectedQuizQuestions.length} pregunta(s). Creado:{" "}
+                      {selectedQuizQuestionCount} pregunta(s). Creado:{" "}
                       {formatDate(selectedQuiz.created_at)}
                     </p>
                   </div>
@@ -2736,11 +2741,14 @@ export function OrganizationDetail({ organizationId }: OrganizationDetailProps) 
                 ) : (
                   <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
                     <h4 className="font-semibold text-slate-950">
-                      Este quiz aun no tiene preguntas
+                      {selectedQuizQuestionCount > 0
+                        ? "No se pudieron cargar las preguntas"
+                        : "Este quiz aun no tiene preguntas"}
                     </h4>
                     <p className="mt-2 text-sm text-slate-500">
-                      Crea un quiz con al menos una pregunta para poder iniciar
-                      un intento.
+                      {selectedQuizQuestionCount > 0
+                        ? "El quiz existe en el salon, pero el backend devolvio un error al consultar su detalle con este usuario."
+                        : "Crea un quiz con al menos una pregunta para poder iniciar un intento."}
                     </p>
                   </div>
                 )}
