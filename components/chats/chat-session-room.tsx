@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
@@ -308,6 +308,7 @@ export function ChatSessionRoom({ sessionId }: ChatSessionRoomProps) {
         setSessions(normalizeSessions(sessionsData))
         setDocuments(normalizeDocuments(documentsData))
         setMessages(sessionId ? normalizeMessages(messagesData) : [])
+
       } catch (error) {
         if (!isMounted) return
 
@@ -336,7 +337,7 @@ export function ChatSessionRoom({ sessionId }: ChatSessionRoomProps) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, isSending, isRegenerating])
 
-  const sendQuestionToSession = async (targetSessionId: string, text: string) => {
+  const sendQuestionToSession = useCallback(async (targetSessionId: string, text: string) => {
     const optimisticUserMessage: ChatMessage = {
       id: `local-user-${Date.now()}`,
       role: "user",
@@ -363,7 +364,9 @@ export function ChatSessionRoom({ sessionId }: ChatSessionRoomProps) {
           },
         ])
       } else {
-        await loadMessages()
+        const messagesData = await getRagSessionMessages(targetSessionId)
+
+        setMessages(normalizeMessages(messagesData))
       }
     } catch (error) {
       const message =
@@ -376,7 +379,25 @@ export function ChatSessionRoom({ sessionId }: ChatSessionRoomProps) {
     } finally {
       setIsSending(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (!sessionId || isLoading || isSending) return
+
+    const pendingStoredQuestion = window.sessionStorage.getItem(
+      `nexabot-pending-question:${sessionId}`
+    )
+
+    if (!pendingStoredQuestion) return
+
+    window.sessionStorage.removeItem(`nexabot-pending-question:${sessionId}`)
+
+    const timeoutId = window.setTimeout(() => {
+      void sendQuestionToSession(sessionId, pendingStoredQuestion)
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [sessionId, isLoading, isSending, sendQuestionToSession])
 
   const handleCreateSession = async ({
     title,
@@ -432,9 +453,11 @@ export function ChatSessionRoom({ sessionId }: ChatSessionRoomProps) {
       setIsSetupOpen(false)
       setSetupTitle("")
       setSelectedDocumentIds([])
-      await loadSidebarData()
+      window.sessionStorage.setItem(
+        `nexabot-pending-question:${createdSession.id}`,
+        firstQuestion
+      )
       router.push(`/dashboard/chats/${createdSession.id}`)
-      await sendQuestionToSession(createdSession.id, firstQuestion)
       setPendingQuestion("")
     } finally {
       setIsCreating(false)
@@ -707,6 +730,26 @@ export function ChatSessionRoom({ sessionId }: ChatSessionRoomProps) {
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-col">
+        <header className="border-b border-slate-200 bg-white px-5 py-4">
+          <p className="text-sm font-medium text-blue-600">
+            Chat
+          </p>
+          <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-950">
+                {activeSessionTitle || "Selecciona una conversacion"}
+              </h1>
+              <p className="mt-1 max-w-2xl text-sm text-slate-500">
+                Elige un chat del historial o crea uno nuevo para empezar a
+                conversar con tus PDFs.
+              </p>
+            </div>
+            <span className="text-xs font-medium uppercase tracking-wider text-slate-400">
+              RAG Chat
+            </span>
+          </div>
+        </header>
+
         {error && (
           <div className="border-b border-red-100 bg-red-50 px-5 py-3 text-sm text-red-600">
             {error}
@@ -730,14 +773,24 @@ export function ChatSessionRoom({ sessionId }: ChatSessionRoomProps) {
                 onDelete={() => void handleDeleteMessage(message)}
               />
             ))
+          ) : sessionId ? (
+            <div className="flex h-full flex-col items-center justify-center text-center">
+              <h2 className="text-3xl font-semibold text-slate-950">
+                Preguntame sobre tus PDFs
+              </h2>
+              <p className="mt-3 max-w-lg text-sm text-slate-500">
+                Esta conversacion aun no tiene mensajes. Escribe tu primera
+                pregunta y la IA respondera usando los documentos asociados.
+              </p>
+            </div>
           ) : (
             <div className="flex h-full flex-col items-center justify-center text-center">
               <h2 className="text-3xl font-semibold text-slate-950">
-                ¿En que deberiamos centrarnos?
+                Selecciona o crea un chat
               </h2>
               <p className="mt-3 max-w-lg text-sm text-slate-500">
-                Escribe una pregunta. Si no hay una conversacion abierta, te
-                pedire el nombre y los PDFs asociados antes de iniciar.
+                Para hacer preguntas necesitas abrir una conversacion del
+                historial o crear un nuevo chat con los PDFs que quieras usar.
               </p>
             </div>
           )}
@@ -754,6 +807,7 @@ export function ChatSessionRoom({ sessionId }: ChatSessionRoomProps) {
           <div ref={bottomRef} />
         </div>
 
+        {sessionId && (
         <div className="border-t border-slate-200 p-4">
           <div className="mb-3 flex justify-between gap-3">
             <span className="truncate text-sm font-medium text-slate-500">
@@ -793,6 +847,7 @@ export function ChatSessionRoom({ sessionId }: ChatSessionRoomProps) {
             </button>
           </form>
         </div>
+        )}
       </div>
 
       {isSetupOpen && (
